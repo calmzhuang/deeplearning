@@ -5,7 +5,6 @@
 
 [网易云课堂](http://study.163.com/)提供的免费正版的课程资料，给予了我极大的帮助。
 
-## [博客传送门](https://github.com/calmzhuang/deeplearning)
 
 ## 笔记
 
