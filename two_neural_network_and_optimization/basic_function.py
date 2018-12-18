@@ -187,7 +187,7 @@ def L_model_forward(X, parameters, keep_prob):
                                           keep_prob=keep_prob[1])
     caches.append(cache)
 
-    assert (AL.shape == (1, X.shape[1]))
+    assert (AL.shape == (6, X.shape[1]))
 
     return AL, caches
 
@@ -207,7 +207,7 @@ def compute_cost(AL, Y):
     m = Y.shape[1]
 
     # Compute loss from aL and y.
-    cost = (1. / m) * np.sum(np.sum(-np.multiply(Y, np.log(AL))))
+    cost = -(1. / m) * np.sum(np.sum(np.multiply(Y, np.log(AL))))
 
     cost = np.squeeze(cost)  # To make sure your cost's shape is what we expect (e.g. this turns [[17]] into 17).
     assert (cost.shape == ())

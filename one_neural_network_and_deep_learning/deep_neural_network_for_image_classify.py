@@ -2,7 +2,7 @@ import sys
 import os
 import h5py
 sys.path.append(os.path.dirname(os.curdir))
-from basic_function import *
+from one_neural_network_and_deep_learning.basic_function import *
 
 
 plt.rcParams['figure.figsize'] = (5.0, 4.0) # set default size of plots

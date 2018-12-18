@@ -34,26 +34,50 @@ def get_data():
     # Convert training and test labels to one hot matrices
     Y_train = convert_to_one_hot(Y_train_orig, 6)
     Y_test = convert_to_one_hot(Y_test_orig, 6)
+    return X_train, Y_train, X_test, Y_test
 
-    print("number of training examples = " + str(X_train.shape[1]))
-    print("number of test examples = " + str(X_test.shape[1]))
-    print("X_train shape: " + str(X_train.shape))
-    print("Y_train shape: " + str(Y_train.shape))
-    print("X_test shape: " + str(X_test.shape))
-    print("Y_test shape: " + str(Y_test.shape))
-
-def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001,num_epochs = 1500, minibatch_size = 32, print_cost = True):
+def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.001,num_epochs = 1500, minibatch_size = 32, print_cost = True):
     np.random.seed(1)
     m = X_train.shape[1]
     seed = 3
+    t = 0
     costs = []
     parameters = initialize_parameters_deep(layers_dims)
+    v, s = initialize_adam(parameters)
     for epoch in range(num_epochs):
-        epoch_cost = 0.
+        epoch_cost = 0
         num_minibatches = int(m / minibatch_size)
         seed = seed + 1
         minibatches = random_mini_batches(X_train, Y_train, minibatch_size, seed)
+        for minibatch in minibatches:
+            # Select a minibatch
+            (minibatch_X, minibatch_Y) = minibatch
+            AL, caches = L_model_forward(minibatch_X, parameters, keep_prob=[1, 1])
+            minibatch_cost = compute_cost(AL + 1e-15, minibatch_Y)
+            grads = L_model_backward(AL, minibatch_Y, caches)
+            epoch_cost += minibatch_cost / num_minibatches
+            t += 1
+            parameters, v, s = update_parameters_with_adam(parameters, grads, v, s, t, learning_rate)
+        # Print the cost every epoch
+        if print_cost is True and epoch % 100 == 0:
+            print("Cost after epoch %i: %f" % (epoch, epoch_cost))
+        if print_cost is True and epoch % 5 == 0:
+            costs.append(epoch_cost)
+    plt.plot(np.squeeze(costs))
+    plt.ylabel('cost')
+    plt.xlabel('iterations (per tens)')
+    plt.title("Learning rate =" + str(learning_rate))
+    plt.show()
+    AL, _ = L_model_forward(X_test, parameters, keep_prob=[1, 1])
+    correct_prediction = np.equal(np.argmax(AL, axis=0), Y_test)
+    accuracy = np.mean(np.cast(correct_prediction, "float"))
+    print(accuracy)
 
+
+def run():
+    X_train, Y_train, X_test, Y_test = get_data()
+    layers_dims = [12288, 25, 12, 6]
+    model(X_train, Y_train, X_test, Y_test, layers_dims)
 
 if __name__ == '__main__':
-    get_data()
+    run()
