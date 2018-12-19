@@ -19,8 +19,6 @@ def load_dataset():
 
 def convert_to_one_hot(Y, C):
     Y = np.eye(C)[Y.reshape(-1)].T
-    print(np.eye(C))
-    print(Y.reshape(-1))
     return Y
 
 def get_data():
@@ -70,7 +68,7 @@ def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.001,n
     plt.show()
     AL, _ = L_model_forward(X_test, parameters, keep_prob=[1, 1])
     correct_prediction = np.equal(np.argmax(AL, axis=0), Y_test)
-    accuracy = np.mean(np.cast(correct_prediction, "float"))
+    accuracy = np.mean(correct_prediction.astype(float))
     print(accuracy)
 
 
