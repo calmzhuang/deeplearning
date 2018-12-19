@@ -34,7 +34,7 @@ def get_data():
     Y_test = convert_to_one_hot(Y_test_orig, 6)
     return X_train, Y_train, X_test, Y_test
 
-def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.001,num_epochs = 1500, minibatch_size = 32, print_cost = True):
+def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001,num_epochs = 3000, minibatch_size = 32, print_cost = True):
     np.random.seed(1)
     m = X_train.shape[1]
     seed = 3
@@ -42,6 +42,8 @@ def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.001,n
     costs = []
     parameters = initialize_parameters_deep(layers_dims)
     v, s = initialize_adam(parameters)
+    accuracy_train = get_accuracy(X_train, Y_train, parameters)
+    print(accuracy_train)
     for epoch in range(num_epochs):
         epoch_cost = 0
         num_minibatches = int(m / minibatch_size)
@@ -66,16 +68,22 @@ def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.001,n
     plt.xlabel('iterations (per tens)')
     plt.title("Learning rate =" + str(learning_rate))
     plt.show()
-    AL, _ = L_model_forward(X_test, parameters, keep_prob=[1, 1])
-    correct_prediction = np.equal(np.argmax(AL, axis=0), Y_test)
-    accuracy = np.mean(correct_prediction.astype(float))
-    print(accuracy)
+    accuracy_train = get_accuracy(X_train, Y_train, parameters)
+    accuracy_test = get_accuracy(X_test, Y_test, parameters)
+    print("accuracy_train: {}".format(accuracy_train))
+    print("accuracy_test: {}".format(accuracy_test))
 
+def get_accuracy(X, Y, parameters):
+    AL, _ = L_model_forward(X, parameters, keep_prob=[1, 1])
+    correct_prediction = np.equal(np.argmax(AL, axis=0), np.argmax(Y, axis=0))
+    accuracy = np.mean(correct_prediction.astype(float))
+    return accuracy
 
 def run():
     X_train, Y_train, X_test, Y_test = get_data()
     layers_dims = [12288, 25, 12, 6]
     model(X_train, Y_train, X_test, Y_test, layers_dims)
+
 
 if __name__ == '__main__':
     run()
