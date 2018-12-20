@@ -124,7 +124,7 @@ def linear_forward(a_cap, w_cap, b):
     return z_cap, cache
 
 
-def linear_activation_forward(A_prev, W, b, activation, keep_prob):
+def linear_activation_forward(A_prev, W, b, activation, keep_prob, seed):
     """
     Implement the forward propagation for the LINEAR->ACTIVATION layer
 
@@ -139,6 +139,7 @@ def linear_activation_forward(A_prev, W, b, activation, keep_prob):
     cache -- a python dictionary containing "linear_cache" and "activation_cache";
              stored for computing the backward pass efficiently
     """
+    np.random.seed(seed)
     z, linear_cache = linear_forward(A_prev, W, b)
     if activation == "sigmoid":
         # Inputs: "A_prev, W, b". Outputs: "A, activation_cache".
@@ -151,12 +152,12 @@ def linear_activation_forward(A_prev, W, b, activation, keep_prob):
     A = np.multiply(A, d_cap)
     A = A/keep_prob
     assert (A.shape == (W.shape[0], A_prev.shape[1]))
-    cache = (linear_cache, activation_cache)
+    cache = (linear_cache, activation_cache, d_cap, keep_prob)
 
     return A, cache
 
 
-def L_model_forward(X, parameters, keep_prob):
+def L_model_forward(X, parameters, keep_prob, seed=1):
     """
     Implement forward propagation for the [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID computation
 
@@ -179,12 +180,12 @@ def L_model_forward(X, parameters, keep_prob):
     for l in range(1, L):
         A_prev = A
         A, cache = linear_activation_forward(A_prev, parameters['W' + str(l)], parameters['b' + str(l)],
-                                             activation="relu", keep_prob=keep_prob[0])
+                                             activation="relu", keep_prob=keep_prob[0], seed=seed)
         caches.append(cache)
 
     # Implement LINEAR -> SIGMOID. Add "cache" to the "caches" list.
     AL, cache = linear_activation_forward(A, parameters['W' + str(L)], parameters['b' + str(L)], activation="sigmoid",
-                                          keep_prob=keep_prob[1])
+                                          keep_prob=keep_prob[1], seed=seed)
     caches.append(cache)
 
     assert (AL.shape == (6, X.shape[1]))
@@ -211,6 +212,34 @@ def compute_cost(AL, Y):
 
     cost = np.squeeze(cost)  # To make sure your cost's shape is what we expect (e.g. this turns [[17]] into 17).
     assert (cost.shape == ())
+
+    return cost
+
+
+def compute_cost_with_regularization(A3, Y, parameters, lambd):
+    """
+    Implement the cost function with L2 regularization. See formula (2) above.
+
+    Arguments:
+    A3 -- post-activation, output of forward propagation, of shape (output size, number of examples)
+    Y -- "true" labels vector, of shape (output size, number of examples)
+    parameters -- python dictionary containing parameters of the model
+
+    Returns:
+    cost - value of the regularized loss function (formula (2))
+    """
+    m = Y.shape[1]
+    W1 = parameters["W1"]
+    W2 = parameters["W2"]
+    W3 = parameters["W3"]
+
+    cross_entropy_cost = compute_cost(A3, Y)  # This gives you the cross-entropy part of the cost
+
+    ### START CODE HERE ### (approx. 1 line)
+    L2_regularization_cost = lambd / (2 * m) * (np.sum(np.square(W1)) + np.sum(np.square(W2)) + np.sum(np.square(W3)))
+    ### END CODER HERE ###
+
+    cost = cross_entropy_cost + L2_regularization_cost
 
     return cost
 
@@ -260,7 +289,7 @@ def relu_backward(dA, cache):
     return dZ
 
 
-def linear_backward(dZ, cache):
+def linear_backward(dZ, cache, lamdb):
     """
     Implement the linear portion of backward propagation for a single layer (layer l)
 
@@ -276,7 +305,7 @@ def linear_backward(dZ, cache):
     A_prev, W, b = cache
     m = A_prev.shape[1]
 
-    dW = 1. / m * np.dot(dZ, A_prev.T)
+    dW = 1. / m * np.dot(dZ, A_prev.T) + lamdb / m * W
     db = 1. / m * np.sum(dZ, axis=1, keepdims=True)
     dA_prev = np.dot(W.T, dZ)
 
@@ -287,7 +316,7 @@ def linear_backward(dZ, cache):
     return dA_prev, dW, db
 
 
-def linear_activation_backward(dA, cache, activation):
+def linear_activation_backward(dA, cache, activation, lamdb):
     """
     Implement the backward propagation for the LINEAR->ACTIVATION layer.
 
@@ -301,20 +330,21 @@ def linear_activation_backward(dA, cache, activation):
     dW -- Gradient of the cost with respect to W (current layer l), same shape as W
     db -- Gradient of the cost with respect to b (current layer l), same shape as b
     """
-    linear_cache, activation_cache = cache
-
+    linear_cache, activation_cache, d_cap, keep_prob = cache
+    dA = np.multiply(dA, d_cap)
+    dA = dA / keep_prob
     if activation == "relu":
         dZ = relu_backward(dA, activation_cache)
-        dA_prev, dW, db = linear_backward(dZ, linear_cache)
+        dA_prev, dW, db = linear_backward(dZ, linear_cache, lamdb)
 
     elif activation == "sigmoid":
         dZ = dA
-        dA_prev, dW, db = linear_backward(dZ, linear_cache)
+        dA_prev, dW, db = linear_backward(dZ, linear_cache, lamdb)
 
     return dA_prev, dW, db
 
 
-def L_model_backward(AL, Y, caches):
+def L_model_backward(AL, Y, caches, lamdb):
     """
     Implement the backward propagation for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 
@@ -342,13 +372,13 @@ def L_model_backward(AL, Y, caches):
     # Lth layer (SIGMOID -> LINEAR) gradients. Inputs: "AL, Y, caches". Outputs: "grads["dAL"], grads["dWL"], grads["dbL"]
     current_cache = caches[L - 1]
     grads["dA" + str(L)], grads["dW" + str(L)], grads["db" + str(L)] = linear_activation_backward(dZL, current_cache,
-                                                                                                  activation="sigmoid")
+                                                                                                  activation="sigmoid", lamdb=lamdb)
 
     for l in reversed(range(L - 1)):
         # lth layer: (RELU -> LINEAR) gradients.
         current_cache = caches[l]
         dA_prev_temp, dW_temp, db_temp = linear_activation_backward(grads["dA" + str(l + 2)], current_cache,
-                                                                    activation="relu")
+                                                                    activation="relu", lamdb=lamdb)
         grads["dA" + str(l + 1)] = dA_prev_temp
         grads["dW" + str(l + 1)] = dW_temp
         grads["db" + str(l + 1)] = db_temp
@@ -420,6 +450,33 @@ def update_parameters_with_adam(parameters, grads, v, s, t, learning_rate=0.01,
         ### END CODE HERE ###
 
     return parameters, v, s
+
+
+def update_parameters(parameters, grads, learning_rate):
+    """
+    Update parameters using gradient descent
+
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(i)] = Wi
+                    parameters['b' + str(i)] = bi
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(i)] = dWi
+                    grads['db' + str(i)] = dbi
+    learning_rate -- the learning rate, scalar.
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters
+    """
+
+    n = len(parameters) // 2  # number of layers in the neural networks
+
+    # Update rule for each parameter
+    for k in range(n):
+        parameters["W" + str(k + 1)] = parameters["W" + str(k + 1)] - learning_rate * grads["dW" + str(k + 1)]
+        parameters["b" + str(k + 1)] = parameters["b" + str(k + 1)] - learning_rate * grads["db" + str(k + 1)]
+
+    return parameters
 
 
 def predict(X, y, parameters):

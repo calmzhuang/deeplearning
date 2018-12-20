@@ -34,7 +34,7 @@ def get_data():
     Y_test = convert_to_one_hot(Y_test_orig, 6)
     return X_train, Y_train, X_test, Y_test
 
-def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001,num_epochs = 3000, minibatch_size = 32, print_cost = True):
+def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001, lambd = 0.9, num_epochs = 3000, minibatch_size = 32, print_cost = True):
     np.random.seed(1)
     m = X_train.shape[1]
     seed = 3
@@ -53,11 +53,12 @@ def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001,
             # Select a minibatch
             (minibatch_X, minibatch_Y) = minibatch
             AL, caches = L_model_forward(minibatch_X, parameters, keep_prob=[1, 1])
-            minibatch_cost = compute_cost(AL + 1e-15, minibatch_Y)
-            grads = L_model_backward(AL, minibatch_Y, caches)
+            minibatch_cost = compute_cost_with_regularization(AL + 1e-15, minibatch_Y, parameters, lambd)
+            grads = L_model_backward(AL, minibatch_Y, caches, lambd)
             epoch_cost += minibatch_cost / num_minibatches
             t += 1
             parameters, v, s = update_parameters_with_adam(parameters, grads, v, s, t, learning_rate)
+            # parameters = update_parameters(parameters, grads, learning_rate)
         # Print the cost every epoch
         if print_cost is True and epoch % 100 == 0:
             print("Cost after epoch %i: %f" % (epoch, epoch_cost))
