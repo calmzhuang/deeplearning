@@ -34,7 +34,7 @@ def get_data():
     Y_test = convert_to_one_hot(Y_test_orig, 6)
     return X_train, Y_train, X_test, Y_test
 
-def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001, lambd = 0.9, num_epochs = 3000, minibatch_size = 32, print_cost = True):
+def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001, lambd = 0, num_epochs = 4000, minibatch_size = 32, print_cost = True):
     np.random.seed(1)
     m = X_train.shape[1]
     seed = 3
@@ -52,7 +52,7 @@ def model(X_train, Y_train, X_test, Y_test, layers_dims, learning_rate = 0.0001,
         for minibatch in minibatches:
             # Select a minibatch
             (minibatch_X, minibatch_Y) = minibatch
-            AL, caches = L_model_forward(minibatch_X, parameters, keep_prob=[1, 1])
+            AL, caches = L_model_forward(minibatch_X, parameters, keep_prob=[0.85, 1])
             minibatch_cost = compute_cost_with_regularization(AL + 1e-15, minibatch_Y, parameters, lambd)
             grads = L_model_backward(AL, minibatch_Y, caches, lambd)
             epoch_cost += minibatch_cost / num_minibatches
